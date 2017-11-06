@@ -141,7 +141,27 @@ List of bugs:
 
  - [open "oss-fuzz" bugs in Wireshark Bugzilla][openbugs]
  - [all "oss-fuzz" bugs in Wireshark Bugzilla][allbugs]
+ - [all proj-Wireshark issues on oss-fuzz issue tracker][crbugs]
+
+Where to find oss-fuzz stuff related to Wireshark:
+
+ - [Wireshark oss-fuzz project configuration][oss-fuzz-gh]
+ - [tools/oss-fuzzshark][ws-fuzzshark]
+
+Alternative way to actually reproduce the exact issue reported by oss-fuzz:
+
+ - [oss-fuzz docs: Reproducing OSS-Fuzz issues][reproducing] explains how to
+   use the oss-fuzz tooling (requires Docker).
+
+If you have further questions, feel free to contact me (https://lekensteyn.nl/)
+or the [wireshark-dev mailing list][dev-list].
+
 
  [cookieext]: https://github.com/Rob--W/cookie-manager
  [openbugs]: https://bugs.wireshark.org/bugzilla/buglist.cgi?f1=short_desc&o1=casesubstring&v1=%5Boss-fuzz%5D&bug_status=__open__
+ [crbugs]: https://bugs.chromium.org/p/oss-fuzz/issues/list?can=1&q=proj:Wireshark&colspec=ID+Modified+Type+Status+Summary
  [allbugs]: https://bugs.wireshark.org/bugzilla/buglist.cgi?f1=short_desc&o1=casesubstring&v1=%5Boss-fuzz%5D
+ [oss-fuzz-gh]: https://github.com/google/oss-fuzz/tree/master/projects/wireshark
+ [ws-fuzzshark]: https://github.com/wireshark/wireshark/tree/master/tools/oss-fuzzshark
+ [reproducing]: https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md
+ [dev-list]: https://www.wireshark.org/mailman/listinfo/wireshark-dev
