@@ -136,6 +136,21 @@ Grab a file with:
 Use `grab-monorail.py --help` for more options. In particular, `--report`
 automatically reports a bug to Bugzilla, similarly to `oss-fuzz-report.py`.
 
+## Userscripts
+After confirming the bug above (and reporting it via the `--report` option), you
+could inform the oss-fuzz project. To help automating this, install
+`userscripts/oss-fuzz_monorail_helpers_for_Wireshark.user.js` (tested with
+GreaseMonkey in Firefox). It will automatically populate the comment form with a
+comment linking to the Wireshark bug and include its status.
+
+There is also `userscripts/Wireshark_oss-fuzz_bugzilla.user.js` which is used to
+convert the Link columns in Bugzilla search queries into the Issue ID. Two named
+queried shared by me (unfortunately this requires a Bugzilla account with
+canconfirm permissions):
+
+ - [named search: oss-fuzz][ws-openbugs]
+ - [named search: oss-fuzz open][ws-allbugs]
+
 ## Links
 List of bugs:
 
@@ -157,6 +172,8 @@ If you have further questions, feel free to contact me (https://lekensteyn.nl/)
 or the [wireshark-dev mailing list][dev-list].
 
 
+ [ws-openbugs]: https://bugs.wireshark.org/bugzilla/buglist.cgi?cmdtype=dorem&remaction=run&namedcmd=oss-fuzz&sharer_id=5558
+ [ws-allbugs]: https://bugs.wireshark.org/bugzilla/buglist.cgi?cmdtype=dorem&remaction=run&namedcmd=oss-fuzz%20open&sharer_id=5558
  [cookieext]: https://github.com/Rob--W/cookie-manager
  [openbugs]: https://bugs.wireshark.org/bugzilla/buglist.cgi?f1=short_desc&o1=casesubstring&v1=%5Boss-fuzz%5D&bug_status=__open__
  [crbugs]: https://bugs.chromium.org/p/oss-fuzz/issues/list?can=1&q=proj:Wireshark&colspec=ID+Modified+Type+Status+Summary
