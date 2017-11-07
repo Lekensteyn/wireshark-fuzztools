@@ -58,7 +58,7 @@ options with:
 Note that in this way, you must disable memleak detection via an environment
 variable or the build fails with Lemon:
 
-    ASAN_OPTIONS=detect_memleaks=0 ninja
+    ASAN_OPTIONS=detect_leaks=0 ninja
 
 ## Setup - automatically file Bugzilla issues
 Once an issue has been reproduced, it is possible to automatically file a bug.
