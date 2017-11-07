@@ -50,8 +50,14 @@ def fatal(*args):
 
 def parse_cookies(text):
     cookies = {}
-    for m in re.finditer(r'(SACSID)\s+(~[0-9a-zA-Z_-]+)\s+([a-z.-]+)\s', text):
+    for m in re.finditer(r'(SACSID)\s+(~[0-9a-zA-Z_-]+)\s+([a-z.-]+)(?:\s|$)', text):
         key, value, domain = m.groups()
+        cookies[domain] = (key, value)
+    # compatibility with Netscape cookie jar
+    garbage = r'(?:TRUE|FALSE)\s+/\s+(TRUE|FALSE)\s+\d+\s+'
+    cj_pattern = r'([a-z.-]+)\s+' + garbage + r'(SACSID)\s+(~[0-9a-zA-Z_-]+)\s+'
+    for m in re.finditer(cj_pattern, text):
+        domain, key, value = m.groups()
         cookies[domain] = (key, value)
     if any(not d in cookies for d in ["bugs.chromium.org", "oss-fuzz.com"]):
         fatal("Missing domains, got: %s", " ".join(cookies.keys()))
