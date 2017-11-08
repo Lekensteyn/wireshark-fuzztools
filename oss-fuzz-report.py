@@ -332,6 +332,7 @@ def main():
         # from triggering an error in g_dir_open which would result in a
         # error message.  https://github.com/google/sanitizers/issues/787
         os.makedirs(os.path.join(homedir, ".config/wireshark/plugins"))
+        os.makedirs(os.path.join(homedir, ".local/lib/wireshark/plugins"))
 
         # Try to reproduce
         error = process_pcap(pcap_filename, homedir, args.timeout,
