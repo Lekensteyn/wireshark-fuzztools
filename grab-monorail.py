@@ -105,7 +105,7 @@ for prefix in ["clusterfuzz-testcase-minimized-", "clusterfuzz-testcase-"]:
 if attachment_name is None:
     att_url = DOWNLOAD_URL + testcase_id
     r = session.get(att_url, stream=True)
-    pat = re.search(r'filename=([a-z0-9-]+)', r.headers['content-disposition'])
+    pat = re.search(r'filename=([a-z0-9_-]+)', r.headers['content-disposition'])
     if not pat:
         fatal('Cannot parse header: %s', r.headers['content-disposition'])
     attachment_name = pat.group(1)
