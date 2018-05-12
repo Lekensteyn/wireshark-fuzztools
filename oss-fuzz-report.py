@@ -255,10 +255,18 @@ def create_summary(errmsg):
     # Try to detect our timeout
     timeout_match = re.search(r'^ERROR: (timeout after \d+ seconds)$', errmsg, re.MULTILINE)
     if timeout_match:
-        dissector_info = extract_call_info(msg, match_dissector=True)
+        dissector_info = extract_call_info(errmsg, match_dissector=True)
         if dissector_info:
             return "timeout: %s" % dissector_info
         return timeout_match.group(1)
+    # Try to detect OOM and include faulting dissector.
+    oom_msg = "allocator is terminating the process instead of returning 0"
+    if oom_msg in errmsg:
+        msg = "out-of-memory"
+        dissector_info = extract_call_info(errmsg, match_dissector=True)
+        if dissector_info:
+            msg += " via %s" % dissector_info
+        return msg
     # WARNING **: Dissector bug, protocol BGP, in packet 1: More than 1000000 items in the tree -- possible infinite loop
     dbug_match = re.search(r'.*: (Dissector bug(?:, protocol|: ).+)', errmsg, re.MULTILINE)
     if dbug_match:
