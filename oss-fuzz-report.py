@@ -225,25 +225,39 @@ def process_pcap(pcap_filename, homedir, timeout, memlimit, memleaks):
         return
     return stderr, repro
 
+def extract_call_info(errmsg, match_dissector=False):
+    # Assume an issue is in dissectors
+    # "    #8 0x7f9079f8ff5e in expand_dns_name epan/dissectors/packet-dns.c:1158:21"
+    re_file = r'^\s+#\d+ 0x[0-9a-f]+ in (\S+) ([a-z][^:\n]+[0-9:]*)$'
+    re_dissector = r'^\s+#\d+ 0x[0-9a-f]+ in (\S+) (epan/dissectors/[^:\n]+[0-9:]*)$'
+    dissector_match = re.search(re_dissector if match_dissector else re_file,
+            errmsg, re.MULTILINE)
+    if dissector_match:
+        func, filename = dissector_match.groups()
+        return "%s in %s" % (filename, func)
+
 def create_summary(errmsg):
     # Try UBSan match
     ubsan_match = re.search(r'^(?:.*/)?(.*?): runtime error: (.*)', errmsg, re.MULTILINE)
     if ubsan_match:
         return "UBSAN: %s in %s" % ubsan_match.groups()[::-1]
     # Try ASAN match
-    summary_match = re.search('^SUMMARY: AddressSanitizer: (.*)', errmsg, re.MULTILINE)
+    summary_match = re.search('^SUMMARY: AddressSanitizer: (\S+)(.*)', errmsg, re.MULTILINE)
     if summary_match:
-        return "ASAN: %s" % summary_match.group(1)
+        bug_description, bug_extended_info = summary_match.groups()
+        # Try to make reports more useful than just:
+        # ASAN: heap-buffer-overflow (run/tshark+0xffbb1) in __interceptor_memcpy.part.40
+        if bug_extended_info.strip().startswith('('):
+            call_info = extract_call_info(errmsg)
+            if call_info:
+                bug_extended_info = " %s" % call_info
+        return "ASAN: %s%s" % (bug_description, bug_extended_info)
     # Try to detect our timeout
     timeout_match = re.search(r'^ERROR: (timeout after \d+ seconds)$', errmsg, re.MULTILINE)
     if timeout_match:
-        # Assume an issue is in dissectors
-        # "    #8 0x7f9079f8ff5e in expand_dns_name epan/dissectors/packet-dns.c:1158:21"
-        dissector_match = re.search(
-                r'^\s+#\d+ 0x[0-9a-f]+ in (\S+ epan/dissectors/[^:\n]+[0-9:]*)$',
-                errmsg, re.MULTILINE)
-        if dissector_match:
-            return "timeout: %s" % dissector_match.group(1)
+        dissector_info = extract_call_info(msg, match_dissector=True)
+        if dissector_info:
+            return "timeout: %s" % dissector_info
         return timeout_match.group(1)
     # WARNING **: Dissector bug, protocol BGP, in packet 1: More than 1000000 items in the tree -- possible infinite loop
     dbug_match = re.search(r'.*: (Dissector bug(?:, protocol|: ).+)', errmsg, re.MULTILINE)
