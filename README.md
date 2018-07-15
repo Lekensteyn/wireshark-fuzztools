@@ -23,11 +23,12 @@ approach is used rather than using `LINKTYPE_ETHERNET` to closer reflect how the
 fuzzer is invoked: it bypasses the IP dissector and directly calls into TCP.
 
 ## Setup
-To test out-of-memory and timeout (possible infinite loop) reports, build
-additional tools with:
+To test out-of-memory, timeout (possible infinite loop) reports and report
+better call traces for `g_error`, build additional tools with:
 
     cc -shared -fPIC -o libmemlimit.so memlimit.c
     cc -shared -fPIC -o libtimeout.so timeout.c
+    cc -shared -fPIC -o libtrapabort.so trapabort.c
 
 The script has some protocols headers built-in, but for some others it needs the
 `samples_to_pcap` binary from the tools directory in

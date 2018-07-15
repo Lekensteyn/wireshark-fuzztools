@@ -168,7 +168,9 @@ def run_tshark(args, homedir, timeout=10, memlimit=0, memleaks=False):
         'G_SLICE': 'always-malloc',
         'ASAN_OPTIONS': ':'.join(asan_options),
         'UBSAN_OPTIONS': ':'.join(ubsan_options),
+
         #'WIRESHARK_ABORT_ON_DISSECTOR_BUG': '1',
+        'WIRESHARK_ABORT_ON_TOO_MANY_ITEMS': '1',
     }
     # Timeout library XXX make path and timeout configurable?
     env['TIMEOUT'] = str(timeout)
@@ -176,6 +178,9 @@ def run_tshark(args, homedir, timeout=10, memlimit=0, memleaks=False):
     if memlimit:
         env['MEMLIMIT'] = str(memlimit)
         env['LD_PRELOAD'] += ":%s" % os.path.join(BASEDIR, "libmemlimit.so")
+    # Ensure that SIGTRAP is caught and let ASAN produce a nice call trace.
+    # Since Clang 7, ASAN_OPTIONS=handle_sigtrap=1 will have a similar effect.
+    env['LD_PRELOAD'] += ":%s" % os.path.join(BASEDIR, "libtrapabort.so")
 
     _logger.debug("Running %r", [tshark_exec] + args)
     _logger.debug("Env: %r", env)
@@ -243,10 +248,18 @@ def create_summary(errmsg):
     ubsan_match = re.search(r'^(?:.*/)?(.*?): runtime error: (.*)', errmsg, re.MULTILINE)
     if ubsan_match:
         return "UBSAN: %s in %s" % ubsan_match.groups()[::-1]
-    # Try assertion error match
-    assert_match = re.search(r'^ERROR:((?:[^ :]+:)+ assertion failed: .+)', errmsg, re.MULTILINE)
-    if assert_match:
-        return "ABRT: %s" % assert_match.group(1)
+    # Try ASAN abort() traces
+    if "SUMMARY: AddressSanitizer: ABRT" in errmsg:
+        # Try assertion error match
+        # ERROR:epan/packet.c:3089:call_dissector_only: assertion failed: (handle != NULL)
+        assert_match = re.search(r'^ERROR:((?:[^ :]+:)+ assertion failed: .+)', errmsg, re.MULTILINE)
+        if assert_match:
+            return "ABRT: %s" % assert_match.group(1)
+        # Catch "g_error" messages
+        # ** (process:6310): ERROR **: 21:02:19.134: Adding ospf.v3.prefix.options.nu would put more than 1000000 items in the tree -- possible infinite loop
+        gerror_match = re.search(r'\*\* \([^:]+:\d+\): ERROR \*\*: [\d:.]+ (.+)', errmsg, re.MULTILINE)
+        if gerror_match:
+            return "ERROR: %s" % gerror_match.group(1)
     # Try ASAN match
     summary_match = re.search('^SUMMARY: AddressSanitizer: (\S+)(.*)', errmsg, re.MULTILINE)
     if summary_match:

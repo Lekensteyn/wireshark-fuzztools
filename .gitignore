@@ -1,3 +1,4 @@
 libmemlimit.so
 libtimeout.so
+libtrapabort.so
 python-bugzilla/
