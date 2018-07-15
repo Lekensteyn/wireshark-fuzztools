@@ -141,6 +141,8 @@ def run_tshark(args, homedir, timeout=10, memlimit=0, memleaks=False):
         'strict_string_checks=1',
         # "Enables stack-use-after-return checking at run-time."
         'detect_stack_use_after_return=1',
+        # Print nice traces for assertion failures.
+        'handle_abort=1',
 
         # Set memory limit (this is a background thread, polling every 100ms).
         'hard_rss_limit_mb=2048',
@@ -241,6 +243,10 @@ def create_summary(errmsg):
     ubsan_match = re.search(r'^(?:.*/)?(.*?): runtime error: (.*)', errmsg, re.MULTILINE)
     if ubsan_match:
         return "UBSAN: %s in %s" % ubsan_match.groups()[::-1]
+    # Try assertion error match
+    assert_match = re.search(r'^ERROR:((?:[^ :]+:)+ assertion failed: .+)', errmsg, re.MULTILINE)
+    if assert_match:
+        return "ABRT: %s" % assert_match.group(1)
     # Try ASAN match
     summary_match = re.search('^SUMMARY: AddressSanitizer: (\S+)(.*)', errmsg, re.MULTILINE)
     if summary_match:
