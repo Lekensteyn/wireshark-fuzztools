@@ -25,7 +25,7 @@ _logger = logging.getLogger(__name__)
 
 def report_bug(title, description, url, pcap_filename):
     if bugzilla is None:
-        _logger.warn("module bugzilla is unavailable, cannot report bug!")
+        _logger.warning("module bugzilla is unavailable, cannot report bug!")
         return
 
     apikey = open(apikey_file).read().strip()
@@ -291,7 +291,7 @@ def create_summary(errmsg):
     if dbug_match:
         return dbug_match.group(1)
     # Should not happen, but in case it happens, return first non-empty line
-    _logger.warn("Could not detect sanitizer summary line!")
+    _logger.warning("Could not detect sanitizer summary line!")
     for line in errmsg.split("\n"):
         line = line.strip()
         if line and line != "**":
@@ -379,7 +379,7 @@ def main():
         error = process_pcap(pcap_filename, homedir, args.timeout,
                 args.memlimit, args.memleaks)
         if not error:
-            _logger.warn("%s: no error", pcap_name)
+            _logger.warning("%s: no error", pcap_name)
         else:
             errmsg, repro = error
             title, description = create_report(pcap_name, errmsg, url, homedir,
