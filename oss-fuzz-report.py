@@ -58,9 +58,9 @@ def report_bug(title, description, url, pcap_filename):
     with open(pcap_filename, 'rb') as pcap_file:
         bzapi.attachfile(newbug.id, pcap_file, "Packet capture file")
 
-def make_pcap(data):
-    # Pcap header for linktype = 252
-    pcap_data = bytes.fromhex('d4c3b2a1020004000000000000000000ff7f0000fc000000')
+def make_pcap(data, linktype):
+    pcap_data = bytes.fromhex('d4c3b2a1020004000000000000000000ff7f0000')
+    pcap_data += struct.pack('<I', linktype)
     pcap_data += struct.pack('<IIII', 0, 0, len(data), len(data))
     pcap_data += data
     return pcap_data
@@ -111,9 +111,14 @@ def create_pcap(protocol, input_filename, output_filename):
     with open(output_filename, "wb") as output_file:
         header = protocol_headers.get(protocol)
         if header is not None:
+            linktype = 252  # Wireshark Upper PDU
+        elif protocol == 'ip':
+            header = b''
+            linktype = 101  # Raw IP
+        if header is not None:
             with open(input_filename, 'rb') as input_file:
                 payload = input_file.read()
-                output_file.write(make_pcap(header + payload))
+                output_file.write(make_pcap(header + payload, linktype))
             _logger.debug("Wrote header for %s", protocol)
             return
         # Fallback to external program.
