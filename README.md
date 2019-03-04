@@ -120,12 +120,14 @@ oss-fuzz issue ID is repetitive and error-prone work, I have further automated
 this.
 
 First login to https://oss-fuzz.com/ and
-https://bugs.chromium.org/p/oss-fuzz/issues, then copy the `SACSID`. On Firefox
-or Chrome you could use the [Cookie Manager extension by Rob W][cookieext].
-Copy it and write it to a temporary file, e.g. `/tmp/mc`. The file looks like:
+https://bugs.chromium.org/p/oss-fuzz/issues, then copy the `SACSID` cookies
+using [Cookie Manager extension by Rob W][cookieext] (for Firefox and Chrome).
+Select the two SACSID cookies, use the "Export cookies" option from the menu in
+the bottom, select output format "Netscape" and press the Export button. Save it
+to a temporary file, e.g. `/tmp/mc`. The file looks like:
 
-    SACSID	~...	bugs.chromium.org	/	secure, httpOnly, private	20/Nov/2017 13:37:53
-    SACSID	~...	oss-fuzz.com	/	secure, httpOnly, private	7/Nov/2017 13:37:46
+    #HttpOnly_bugs.chromium.org	TRUE	/	TRUE	1552926226	SACSID	~...
+    #HttpOnly_oss-fuzz.com	TRUE	/	TRUE	1551803011	SACSID	~...
 
 These session cookies expire quite fast, so if you get unexpected errors and
 have specified a correct Issue ID, try to refresh the cookies manually.
