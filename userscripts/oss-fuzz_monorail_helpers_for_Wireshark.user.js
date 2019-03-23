@@ -23,7 +23,7 @@ var console = {
 
 function textMatches(text, comment) {
     function normalize(foo) {
-        return foo.trim();
+        return foo.trim().replace(/\r\n/g, "\n");
     }
     text = normalize(text);
     comment = normalize(comment);
@@ -46,8 +46,11 @@ function populateComment(comment) {
         return;
     } else {
         // if one comment on the page contains the same content, do nothing.
-        var texts = Array.from(document.querySelectorAll("pre.issue_text"));
-        if (texts.some((pre) => textMatches(pre.textContent, comment))) {
+        var comments = document.querySelector("#ezt-comments");
+        var commentList = comments && comments.getAttribute("comment-list");
+        commentList = commentList && JSON.parse(commentList);
+        var texts = commentList && commentList.map((c) => c.content);
+        if (texts && texts.some((c) => c && textMatches(c, comment))) {
             commentField.placeholder = "(up to date)";
             return;
         }
