@@ -12,7 +12,7 @@ OSS_FUZZ_BUGURL = "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id="
 DOWNLOAD_URL = 'https://oss-fuzz.com/download?testcase_id='
 
 testcase_pattern = re.compile(r'https://oss-fuzz\.com/testcase\?key=(\d+)')
-proto_pattern = r'\\nFuzzer: (?:afl|libFuzzer)_wireshark_fuzzshark_([a-z_-]+)\\n'
+proto_pattern = r'\\nFuzzer: (?:afl|libFuzzer)_(?:wireshark_)?fuzzshark_([a-z_-]+)\\n'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
