@@ -68,6 +68,7 @@ def make_pcap(data, linktype):
 # Created with scapy and a custom WiresharkUpperPdu class
 protocol_headers = {
     'udp_port-bootp': b'\x00\x0e\x00\x08udp.port\x00 \x00\x04\x00\x00\x00C\x00\x00\x00\x00',
+    'udp_port-dhcp': b'\x00\x0e\x00\x08udp.port\x00 \x00\x04\x00\x00\x00C\x00\x00\x00\x00',
     'ip_proto-udp': b'\x00\x0e\x00\x08ip.proto\x00 \x00\x04\x00\x00\x00\x11\x00\x00\x00\x00',
 }
 
@@ -80,6 +81,7 @@ tcp_port = {
 }
 udp_port = {
     'bootp': 67,
+    'dhcp': 67,
     'dns': 53,
 }
 def make_ip_proto(proto):
