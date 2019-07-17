@@ -143,7 +143,7 @@ Upstream bug: {upstream URL 1}
 Current status: RESOLVED FIXED
 `;
 
-if (/\/detail$/.test(location.pathname)) {
+if (/\/detail(_ezt)?$/.test(location.pathname)) {
     let issueId = new URLSearchParams(location.search).get("id");
     if (issueId) {
         let entries = [];

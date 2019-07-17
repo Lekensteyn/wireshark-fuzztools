@@ -8,7 +8,7 @@ import requests
 import subprocess
 import sys
 
-OSS_FUZZ_BUGURL = "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id="
+OSS_FUZZ_BUGURL = "https://bugs.chromium.org/p/oss-fuzz/issues/detail_ezt?id="
 DOWNLOAD_URL = 'https://oss-fuzz.com/download?testcase_id='
 
 testcase_pattern = re.compile(r'https://oss-fuzz\.com/testcase\?key=(\d+)')
@@ -50,12 +50,12 @@ def fatal(*args):
 
 def parse_cookies(text):
     cookies = {}
-    for m in re.finditer(r'(SACSID)\s+(~[0-9a-zA-Z_-]+)\s+([a-z.-]+)(?:\s|$)', text):
+    for m in re.finditer(r'\b(SACSID|session)\s+(~?[0-9a-zA-Z_-]+)\s+([a-z.-]+)(?:\s|$)', text):
         key, value, domain = m.groups()
         cookies[domain] = (key, value)
     # compatibility with Netscape cookie jar
     garbage = r'(?:TRUE|FALSE)\s+/\s+(?:TRUE|FALSE)\s+\d+\s+'
-    cj_pattern = r'([a-z.-]+)\s+' + garbage + r'(SACSID)\s+(~[0-9a-zA-Z_-]+)(?:\s+|$)'
+    cj_pattern = r'([a-z.-]+)\s+' + garbage + r'(SACSID|session)\s+(~?[0-9a-zA-Z_.-]+)(?:\s+|$)'
     for m in re.finditer(cj_pattern, text):
         domain, key, value = m.groups()
         cookies[domain] = (key, value)
