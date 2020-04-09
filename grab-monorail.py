@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import glob
+import json
 import logging
 import os
 import re
@@ -8,15 +9,24 @@ import requests
 import subprocess
 import sys
 
-OSS_FUZZ_BUGURL = "https://bugs.chromium.org/p/oss-fuzz/issues/detail_ezt?id="
+OSS_FUZZ_TOKENURL = 'https://bugs.chromium.org/p/oss-fuzz/issues/list'
+OSS_FUZZ_LISTCOMMENTS = 'https://bugs.chromium.org/prpc/monorail.Issues/ListComments'
 DOWNLOAD_URL = 'https://oss-fuzz.com/download?testcase_id='
 
+# The token can be found on a separate line within: window.CS_ENV = { ... }
+xsrf_token_pattern = re.compile(r"'token': '([a-zA-Z0-9_-]{36})',")
 testcase_pattern = re.compile(r'https://oss-fuzz\.com/testcase\?key=(\d+)')
-proto_pattern = r'\\nFuzzer: (?:afl|libFuzzer)_(?:wireshark_)?fuzzshark_([a-z_-]+)\\n'
+# Issue 1149: Fuzz target binary: fuzzshark_dissector_ip
+# Issue 20585: Fuzz Target: fuzzshark_udp_port-dhcp
+proto_pattern = r'\nFuzz [Tt]arget(?: binary)?: fuzzshark_([a-z_-]+)\n'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
 parser.add_argument("--cookie-file", "-c", help="File containing cookie value")
+
+def log_blob(msg, blob):
+    sep = '#' * 72
+    logging.debug('%s:\n%s\n%s\n%s', msg, sep, blob, sep)
 
 # Pass through options
 reporter_params = [
@@ -73,22 +83,47 @@ session = requests.Session()
 for domain, (key, value) in sid_cookies.items():
     session.cookies.set(key, value, domain=domain)
 
+# Fetch XSRF token
+r = session.get(OSS_FUZZ_TOKENURL)
+r.raise_for_status()
+pat = re.search(xsrf_token_pattern, r.text)
+if not pat:
+    log_blob('Initial response', r.text)
+    fatal('Cannot find XSRF token')
+xsrf_token = pat.group(1)
+
 # Fetch bug contents
 issue_id = str(args.issue_id)
-bugurl = OSS_FUZZ_BUGURL + issue_id
-r = session.get(bugurl)
+r = session.post(OSS_FUZZ_LISTCOMMENTS, json={
+    "issueRef": {
+        "localId": int(issue_id),
+        "projectName": "oss-fuzz"
+    }
+}, headers={
+    'accept': 'application/json',
+    'x-xsrf-token': xsrf_token
+})
 r.raise_for_status()
+try:
+    # Strip magic prefix line (against XSSI) and extract the first comment.
+    resp = json.loads(r.text.lstrip(")]}'\n"))
+    comment = resp['comments'][0]['content']
+except:
+    log_blob('Comment response', r.text)
+    raise
 
 # Look for ID
-pat = re.search(testcase_pattern, r.text)
+pat = re.search(testcase_pattern, comment)
 if not pat:
+    log_blob('Comment', comment)
     fatal('Cannot find testcase ID')
 testcase_id = pat.group(1)
 
 # Look for type (IP, etc.)
-pat = re.search(proto_pattern, r.text)
+pat = re.search(proto_pattern, comment)
 if not pat:
     # XXX maybe assume IP?
+    log_blob('Comment', comment)
     fatal('Protocol not found')
 protocol = pat.group(1)
 
