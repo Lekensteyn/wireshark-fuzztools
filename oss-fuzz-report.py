@@ -204,18 +204,18 @@ def run_tshark(args, homedir, timeout=10, memlimit=0, memleaks=False):
 
 
 def process_pcap(pcap_filename, homedir, timeout, memlimit, memleaks):
-    repro = "tshark -Vxr"
-    exitcode, stderr, stdout = run_tshark(["-Vxr", pcap_filename], homedir,
-            timeout=timeout, memlimit=memlimit, memleaks=memleaks)
-    _logger.info("exit=%d stderr_bytes=%d stdout_bytes=%d",
-            exitcode, len(stderr), len(stdout))
-    if exitcode == 0 or not stderr:
-        repro = "tshark -r"
-        _logger.info("Possibly no problem, trying without tree")
-        exitcode, stderr, stdout = run_tshark(["-r", pcap_filename], homedir,
-                timeout=timeout, memlimit=memlimit)
-        _logger.info("-V exit=%d stderr_bytes=%d stdout_bytes=%d",
-            exitcode, len(stderr), len(stdout))
+    # Some memleaks are only triggered with -2.
+    repro = None
+    for options in ('-Vxr', '-r', '-2r'):
+        if repro:
+            _logger.info("Possibly no problem, trying another command")
+        repro = "tshark %s" % options
+        exitcode, stderr, stdout = run_tshark([options, pcap_filename], homedir,
+                timeout=timeout, memlimit=memlimit, memleaks=memleaks)
+        _logger.info("%s exit=%d stderr_bytes=%d stdout_bytes=%d",
+                options, exitcode, len(stderr), len(stdout))
+        if exitcode or stderr:
+            break
 
     repro += " %s" % os.path.basename(pcap_filename)
 
