@@ -8,27 +8,11 @@
 
 "use strict";
 /* jshint browser:true, esversion:6, devel:true */
-/* globals URLSearchParams */
+/* globals URLSearchParams, KeyboardEvent */
 
 var BZ_REST_URL = "https://bugs.wireshark.org/bugzilla/rest.cgi/";
 var BZ_BUG_URL = "https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=";
 var CR_ISSUE_URL = "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=";
-
-var console = {
-    log(...args) {
-        let msg = args.join(" ");
-        window.eval(`console.log(${JSON.stringify(msg)})`);
-    }
-};
-
-function textMatches(text, comment) {
-    function normalize(foo) {
-        return foo.trim().replace(/\r\n/g, "\n");
-    }
-    text = normalize(text);
-    comment = normalize(comment);
-    return text === comment;
-}
 
 function getIssueIdFromUrl(url) {
     if (url && url.indexOf(CR_ISSUE_URL) === 0) {
@@ -38,19 +22,37 @@ function getIssueIdFromUrl(url) {
     return null;
 }
 
-function populateComment(comment) {
-    var commentField = document.querySelector("#addCommentTextArea");
+function getShadowRoot(path, elementSelector) {
+    let leaf = path.split(' ').reduce((node, selector) => node?.querySelector(selector).shadowRoot, document);
+    return elementSelector ? leaf?.querySelector(elementSelector) : leaf;
+}
+
+function getCommentField() {
+    let path = 'mr-app mr-issue-page mr-issue-details.main-item mr-edit-issue mr-edit-metadata';
+    let commentField = getShadowRoot(path, '#commentText');
+    if (!commentField) {
+        console.log('Comment box not found');
+    }
+    return commentField;
+}
+
+function populateComment(comment, needle) {
+    var commentField = getCommentField();
     if (!commentField) return;
     if (commentField.value && commentField.value === comment) {
         // same contents, nothing to do.
         return;
     } else {
         // if one comment on the page contains the same content, do nothing.
-        var comments = document.querySelector("#ezt-comments");
-        var commentList = comments && comments.getAttribute("comment-list");
-        commentList = commentList && JSON.parse(commentList);
-        var texts = commentList && commentList.map((c) => c.content);
-        if (texts && texts.some((c) => c && textMatches(c, comment))) {
+        var commentsList = getShadowRoot('mr-app mr-issue-page mr-issue-details.main-item mr-comment-list');
+        // Note that the textContent does not reflect the true visible comment,
+        // newlines (from <br>) are gone and the contents of the style tag are
+        // present. There is also an internal '__content' property on the
+        // mr-comment-content element, but we cannot seem to check it here.
+        var texts = Array.from(commentsList.querySelectorAll('mr-comment'),
+            (c) => c.shadowRoot.querySelector('mr-comment-content'))
+            .map((c) => c.shadowRoot.textContent);
+        if (texts && texts.some((c) => c && c.includes(needle))) {
             commentField.placeholder = "(up to date)";
             return;
         }
@@ -71,17 +73,20 @@ function populateComment(comment) {
         commentField.placeholder = comment;
     } else {
         commentField.value = comment;
+        // ensure that the "Save changes" button is enabled.
+        commentField.dispatchEvent(new KeyboardEvent('keyup'));
     }
 }
 
 function addBugLink(bug) {
-    var commentField = document.querySelector("#addCommentTextArea");
+    var commentField = getCommentField();
     if (!commentField) return;
     var link = document.createElement("a");
     link.style.display = "block";
     link.href = BZ_BUG_URL + bug.id;
     link.textContent = "Bug " + bug.id + " - " + bug.summary;
     link.target = "_blank";
+    link.title = `${bug.status} ${(bug.resolution||'(unfixed)')}\nCreated ${bug.creation_time}\nUpdated ${bug.last_change_time}`;
     commentField.parentNode.insertBefore(link, commentField);
     commentField.focus();
 }
@@ -143,7 +148,7 @@ Upstream bug: {upstream URL 1}
 Current status: RESOLVED FIXED
 `;
 
-if (/\/detail(_ezt)?$/.test(location.pathname)) {
+if (/\/detail$/.test(location.pathname)) {
     let issueId = new URLSearchParams(location.search).get("id");
     if (issueId) {
         let entries = [];
@@ -152,7 +157,8 @@ if (/\/detail(_ezt)?$/.test(location.pathname)) {
                 return "(No upstream bug found)";
             }
             addBugLink(bug);
-            let comment = "Upstream bug: " + BZ_BUG_URL + bug.id + "\n";
+            let bug_url = BZ_BUG_URL + bug.id;
+            let comment = `Upstream bug: ${bug_url}\n`;
             return queryBzRecursivelyByBug(bug).then((bugs) => {
                 bugs.shift();
                 bugs.forEach((bug) => {
@@ -174,10 +180,10 @@ if (/\/detail(_ezt)?$/.test(location.pathname)) {
                 } else {
                     comment += bug.status + " (unfixed)";
                 }
-                return comment;
+                return [comment, bug_url];
             });
-        }).then((comment) => {
-            populateComment(comment);
+        }).then(([comment, needle]) => {
+            populateComment(comment, needle);
         }).catch(function(error) {
             console.log(error);
         });
