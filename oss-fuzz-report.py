@@ -4,6 +4,7 @@ import filecmp
 import logging
 import os
 import re
+import shlex
 import shutil
 import struct
 import subprocess
@@ -203,14 +204,16 @@ def run_tshark(args, homedir, timeout=10, memlimit=0, memleaks=False):
     return proc.returncode, stderr, stdout
 
 
-def process_pcap(pcap_filename, homedir, timeout, memlimit, memleaks):
+def process_pcap(pcap_filename, homedir, timeout, memlimit, memleaks, prefs):
+    extra_options = ['-o%s' % pref for pref in prefs]
     # Some memleaks are only triggered with -2.
     repro = None
     for options in ('-Vxr', '-r', '-2r'):
         if repro:
             _logger.info("Possibly no problem, trying another command")
         repro = "tshark %s" % options
-        exitcode, stderr, stdout = run_tshark([options, pcap_filename], homedir,
+        tshark_args = [options, pcap_filename] + extra_options
+        exitcode, stderr, stdout = run_tshark(tshark_args, homedir,
                 timeout=timeout, memlimit=memlimit, memleaks=memleaks)
         _logger.info("%s exit=%d stderr_bytes=%d stdout_bytes=%d",
                 options, exitcode, len(stderr), len(stdout))
@@ -218,6 +221,8 @@ def process_pcap(pcap_filename, homedir, timeout, memlimit, memleaks):
             break
 
     repro += " %s" % os.path.basename(pcap_filename)
+    if extra_options:
+        repro += ' %s' % ' '.join(shlex.quote(o) for o in extra_options)
 
     # XXX add an option to control this path
     # Strip source and build directories from paths
@@ -343,6 +348,8 @@ parser.add_argument("--memlimit", type=int, default=2 * 1024**3,
         help="Maximum malloc size (default %(default)d)")
 parser.add_argument("--memleaks", action="store_true",
         help="Enable memory leak detection")
+parser.add_argument("-o", dest="prefs", action="append", default=[],
+        help="Additional tshark preference options")
 parser.add_argument("filename", help="Reproducer Testcase")
 parser.add_argument("url", help="URL of the oss-fuzz report")
 
@@ -384,7 +391,7 @@ def main():
 
         # Try to reproduce
         error = process_pcap(pcap_filename, homedir, args.timeout,
-                args.memlimit, args.memleaks)
+                args.memlimit, args.memleaks, args.prefs)
         if not error:
             _logger.warning("%s: no error", pcap_name)
         else:
